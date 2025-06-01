@@ -1,157 +1,215 @@
-from models import DatabaseSession, test_connection
 from crud_operations import UserCRUD, ScheduledMessageCRUD, CombinedOperations
 from datetime import datetime, timedelta
-import time
 
 
-def demo_operations():
-    """Демонстрация всех CRUD операций с новой структурой БД"""
+def test_user_operations():
+    """Тестирование операций с пользователями"""
+    print("=== ТЕСТИРОВАНИЕ ПОЛЬЗОВАТЕЛЕЙ ===")
 
-    print("Проверка подключения к базе данных...")
+    # Создание пользователей
+    print("1. Создание пользователей...")
+    user1 = UserCRUD.create_user(
+        username="testuser1",
+        yandex_email="test1@yandex.ru",
+        yandex_password="password123",
+        yandex_calendar_link="http://calendar.yandex.ru/link1"
+    )
+    print(f"Создан пользователь: {user1}")
 
-    # Ожидание запуска базы данных
-    max_attempts = 10
-    for attempt in range(max_attempts):
-        if test_connection():
-            print("✓ Подключение к базе данных установлено")
-            break
-        else:
-            print(f"⏳ Попытка подключения {attempt + 1}/{max_attempts}...")
-            time.sleep(3)
-    else:
-        print("❌ Не удалось подключиться к базе данных")
-        return
+    user2 = UserCRUD.create_user(
+        username="testuser2",
+        yandex_email="test2@yandex.ru"
+    )
+    print(f"Создан пользователь: {user2}")
 
-    # Использование контекстного менеджера для работы с БД
+    # Получение пользователей
+    print("\n2. Получение пользователей...")
+    user_by_id = UserCRUD.get_user_by_id(user1.id)
+    print(f"Пользователь по ID: {user_by_id}")
+
+    user_by_username = UserCRUD.get_user_by_username("testuser1")
+    print(f"Пользователь по username: {user_by_username}")
+
+    user_by_email = UserCRUD.get_user_by_email("test2@yandex.ru")
+    print(f"Пользователь по email: {user_by_email}")
+
+    # Все пользователи
+    all_users = UserCRUD.get_all_users()
+    print(f"Всего пользователей: {len(all_users)}")
+
+    # Поиск пользователей
+    print("\n3. Поиск пользователей...")
+    search_results = UserCRUD.search_users("test")
+    print(f"Результаты поиска по 'test': {len(search_results)} пользователей")
+
+    # Обновление пользователей
+    print("\n4. Обновление пользователей...")
+    updated_user = UserCRUD.update_user_by_id(
+        user1.id,
+        yandex_password="newpassword456"
+    )
+    print(f"Обновлен пользователь по ID: {updated_user}")
+
+    updated_user2 = UserCRUD.update_user_by_username(
+        "testuser2",
+        yandex_calendar_link="http://calendar.yandex.ru/link2"
+    )
+    print(f"Обновлен пользователь по username: {updated_user2}")
+
+    return user1.id, user2.id
+
+
+def test_message_operations(user1_id, user2_id):
+    """Тестирование операций с сообщениями"""
+    print("\n=== ТЕСТИРОВАНИЕ СООБЩЕНИЙ ===")
+
+    # Создание сообщений
+    print("1. Создание сообщений...")
+    future_time = datetime.now() + timedelta(hours=1)
+    past_time = datetime.now() - timedelta(hours=1)
+
+    message1 = ScheduledMessageCRUD.create_message(
+        user_id=user1_id,
+        title="Тестовое сообщение 1",
+        content="Это первое тестовое сообщение",
+        scheduled_time=future_time
+    )
+    print(f"Создано сообщение: {message1}")
+
+    message2 = ScheduledMessageCRUD.create_message(
+        user_id=user1_id,
+        title="Прошедшее сообщение",
+        content="Это сообщение должно быть готово к отправке",
+        scheduled_time=past_time
+    )
+    print(f"Создано сообщение: {message2}")
+
+    message3 = ScheduledMessageCRUD.create_message(
+        user_id=user2_id,
+        title="Сообщение пользователя 2",
+        content="Сообщение от второго пользователя",
+        scheduled_time=future_time
+    )
+    print(f"Создано сообщение: {message3}")
+
+    # Получение сообщений
+    print("\n2. Получение сообщений...")
+    message_by_id = ScheduledMessageCRUD.get_message_by_id(message1.id)
+    print(f"Сообщение по ID: {message_by_id}")
+
+    user1_messages = ScheduledMessageCRUD.get_messages_by_user(user1_id)
+    print(f"Сообщения пользователя 1: {len(user1_messages)}")
+
+    all_messages = ScheduledMessageCRUD.get_all_messages()
+    print(f"Всего сообщений: {len(all_messages)}")
+
+    # Сообщения по времени
+    print("\n3. Сообщения по времени...")
+    pending_messages = ScheduledMessageCRUD.get_pending_messages()
+    print(f"Готовые к отправке: {len(pending_messages)}")
+
+    upcoming_messages = ScheduledMessageCRUD.get_upcoming_messages()
+    print(f"Предстоящие сообщения: {len(upcoming_messages)}")
+
+    upcoming_user1 = ScheduledMessageCRUD.get_upcoming_messages(user1_id)
+    print(f"Предстоящие сообщения пользователя 1: {len(upcoming_user1)}")
+
+    # Поиск сообщений
+    print("\n4. Поиск сообщений...")
+    search_results = ScheduledMessageCRUD.search_messages("тест")
+    print(f"Результаты поиска по 'тест': {len(search_results)}")
+
+    # Обновление сообщения
+    print("\n5. Обновление сообщения...")
+    updated_message = ScheduledMessageCRUD.update_message(
+        message1.id,
+        title="Обновленное сообщение",
+        content="Обновленное содержимое"
+    )
+    print(f"Обновлено сообщение: {updated_message}")
+
+    return message1.id, message2.id, message3.id
+
+
+def test_combined_operations(user1_id, user2_id):
+    """Тестирование комбинированных операций"""
+    print("\n=== ТЕСТИРОВАНИЕ КОМБИНИРОВАННЫХ ОПЕРАЦИЙ ===")
+
+    # Пользователь с сообщениями
+    user_with_messages = CombinedOperations.get_user_with_messages(user1_id)
+    print(f"Пользователь с сообщениями: {user_with_messages}")
+
+    if user_with_messages:
+        # Теперь сообщения будут загружены
+        print(f"Количество сообщений у пользователя: {len(user_with_messages.scheduled_messages)}")
+
+    # Подсчет сообщений
+    messages_count = CombinedOperations.get_user_messages_count(user1_id)
+    print(f"Количество сообщений пользователя 1: {messages_count}")
+
+
+def test_delete_operations():
+    """Тестирование операций удаления"""
+    print("\n=== ТЕСТИРОВАНИЕ УДАЛЕНИЯ ===")
+
+    # Создаем тестового пользователя для удаления
+    test_user = UserCRUD.create_user(
+        username="delete_test",
+        yandex_email="delete@yandex.ru"
+    )
+
+    # Создаем сообщение для этого пользователя
+    test_message = ScheduledMessageCRUD.create_message(
+        user_id=test_user.id,
+        title="Сообщение для удаления",
+        content="Это сообщение будет удалено вместе с пользователем",
+        scheduled_time=datetime.now() + timedelta(hours=1)
+    )
+
+    print(f"Создан тестовый пользователь для удаления: {test_user}")
+    print(f"Создано тестовое сообщение: {test_message}")
+
+    # Удаление сообщения
+    message_deleted = ScheduledMessageCRUD.delete_message(test_message.id)
+    print(f"Сообщение удалено: {message_deleted}")
+
+    # Удаление пользователя по username
+    user_deleted = UserCRUD.delete_user_by_username("delete_test")
+    print(f"Пользователь удален по username: {user_deleted}")
+
+
+def main():
+    """Основная функция тестирования"""
+    print("НАЧАЛО ТЕСТИРОВАНИЯ CRUD ОПЕРАЦИЙ")
+    print("=" * 50)
+
     try:
-        with DatabaseSession() as db:
-            print("\n=== ДЕМОНСТРАЦИЯ CRUD ОПЕРАЦИЙ ===\n")
+        # Тестирование пользователей
+        user1_id, user2_id = test_user_operations()
 
-            # 1. Создание пользователей
-            print("1. Создание пользователей:")
-            user1 = UserCRUD.create_user(
-                db,
-                username="john_doe",
-                yandex_email="john@example.com",
-                yandex_password="secret123",
-                yandex_calendar_link="https://calendar.yandex.ru/john"
-            )
-            print(f"   ✓ Создан пользователь: {user1.username} (ID: {user1.id})")
+        # Тестирование сообщений
+        message1_id, message2_id, message3_id = test_message_operations(user1_id, user2_id)
 
-            user2 = UserCRUD.create_user(
-                db,
-                username="jane_smith",
-                yandex_email="jane@example.com"
-            )
-            print(f"   ✓ Создан пользователь: {user2.username} (ID: {user2.id})")
+        # Тестирование комбинированных операций
+        test_combined_operations(user1_id, user2_id)
 
-            # 2. Получение пользователей
-            print("\n2. Получение пользователей:")
-            retrieved_user = UserCRUD.get_user_by_id(db, user1.id)
-            print(f"   → Пользователь по ID {user1.id}: {retrieved_user.username}")
+        # Тестирование удаления
+        test_delete_operations()
 
-            user_by_email = UserCRUD.get_user_by_email(db, "jane@example.com")
-            print(f"   → Пользователь по email: {user_by_email.username}")
+        print("\n" + "=" * 50)
+        print("ВСЕ ТЕСТЫ ВЫПОЛНЕНЫ УСПЕШНО!")
 
-            all_users = UserCRUD.get_all_users(db)
-            print(f"   → Всего пользователей: {len(all_users)}")
-
-            # 3. Создание запланированных сообщений
-            print("\n3. Создание запланированных сообщений:")
-            message1 = ScheduledMessageCRUD.create_message(
-                db,
-                user_id=user1.id,
-                title="Напоминание о встрече",
-                content="Не забудь о встрече завтра в 10:00",
-                scheduled_time=datetime.now() + timedelta(hours=1)
-            )
-            print(f"   ✓ Создано сообщение: {message1.title} (ID: {message1.id})")
-
-            message2 = ScheduledMessageCRUD.create_message(
-                db,
-                user_id=user1.id,
-                title="День рождения",
-                content="Сегодня день рождения у мамы!",
-                scheduled_time=datetime.now() + timedelta(days=1)
-            )
-            print(f"   ✓ Создано сообщение: {message2.title} (ID: {message2.id})")
-
-            message3 = ScheduledMessageCRUD.create_message(
-                db,
-                user_id=user2.id,
-                title="Оплата счетов",
-                content="Не забыть оплатить коммунальные услуги",
-                scheduled_time=datetime.now() + timedelta(days=5)
-            )
-            print(f"   ✓ Создано сообщение: {message3.title} (ID: {message3.id})")
-
-            # 4. Получение сообщений
-            print("\n4. Получение сообщений:")
-            user1_messages = ScheduledMessageCRUD.get_messages_by_user(db, user1.id)
-            print(f"   → Сообщений у {user1.username}: {len(user1_messages)}")
-            for msg in user1_messages:
-                print(f"     • {msg.title}")
-
-            all_messages = ScheduledMessageCRUD.get_all_messages(db)
-            print(f"   → Всего сообщений: {len(all_messages)}")
-
-            upcoming_messages = ScheduledMessageCRUD.get_upcoming_messages(db)
-            print(f"   → Предстоящих сообщений: {len(upcoming_messages)}")
-
-            # 5. Обновление данных
-            print("\n5. Обновление данных:")
-            updated_user = UserCRUD.update_user(
-                db,
-                user1.id,
-                yandex_calendar_link="https://new-calendar-link.ru"
-            )
-            print(f"   ✓ Обновлен календарь пользователя: {updated_user.yandex_calendar_link}")
-
-            updated_message = ScheduledMessageCRUD.update_message(
-                db,
-                message1.id,
-                title="ВАЖНО: Напоминание о встрече"
-            )
-            print(f"   ✓ Обновлен заголовок сообщения: {updated_message.title}")
-
-            # 6. Поиск
-            print("\n6. Поиск:")
-            found_users = UserCRUD.search_users(db, "john")
-            print(f"   → Найдено пользователей по запросу 'john': {len(found_users)}")
-
-            found_messages = ScheduledMessageCRUD.search_messages(db, "встреча")
-            print(f"   → Найдено сообщений по запросу 'встреча': {len(found_messages)}")
-
-            # 7. Комбинированные операции
-            print("\n7. Комбинированные операции:")
-            user_with_messages = CombinedOperations.get_user_with_messages(db, user1.id)
-            print(
-                f"   → Пользователь {user_with_messages.username} имеет {len(user_with_messages.scheduled_messages)} сообщений")
-
-            messages_count = CombinedOperations.get_user_messages_count(db, user2.id)
-            print(f"   → У пользователя {user2.username} {messages_count} сообщений")
-
-            # 8. Удаление
-            print("\n8. Удаление:")
-            deleted = ScheduledMessageCRUD.delete_message(db, message2.id)
-            print(f"   ✓ Сообщение удалено: {deleted}")
-
-            # Проверяем количество сообщений после удаления
-            remaining_messages = ScheduledMessageCRUD.get_all_messages(db)
-            print(f"   → Осталось сообщений: {len(remaining_messages)}")
-
-            # 9. Удаление пользователя с сообщениями
-            print("\n9. Удаление пользователя с сообщениями:")
-            deleted_user = CombinedOperations.delete_user_with_messages(db, user2.id)
-            print(f"   ✓ Пользователь удален: {deleted_user}")
-
-            print("\n=== ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА ===")
+        # Очистка тестовых данных
+        print("\nОчистка тестовых данных...")
+        UserCRUD.delete_user_by_id(user1_id)
+        UserCRUD.delete_user_by_id(user2_id)
+        print("Тестовые данные очищены")
 
     except Exception as e:
-        print(f"❌ Ошибка: {e}")
+        print(f"ОШИБКА ПРИ ТЕСТИРОВАНИИ: {e}")
         import traceback
         traceback.print_exc()
 
 
 if __name__ == "__main__":
-    demo_operations()
+    main()

@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:password123@localhost:5432/myapp_db")
 
-engine = create_engine(DATABASE_URL, echo=True)  # echo=True для отладки SQL запросов
+engine = create_engine(DATABASE_URL, echo=False)  # echo=True для отладки SQL запросов
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -37,10 +37,11 @@ class ScheduledMessage(Base):
     __tablename__ = "scheduled_messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(200), nullable=True)
     content = Column(Text, nullable=False)
     scheduled_time = Column(DateTime(timezone=True), nullable=False)
+    is_sent = Column(Boolean, default=False)
 
     # Связь с пользователем
     user = relationship("User", back_populates="scheduled_messages")
@@ -86,7 +87,7 @@ def test_connection():
     """Тестирование подключения к базе данных"""
     try:
         with DatabaseSession() as db:
-            result = db.execute(text("SELECT 1"))
+            db.execute(text("SELECT 1"))
             return True
     except Exception as e:
         print(f"Ошибка подключения к базе данных: {e}")

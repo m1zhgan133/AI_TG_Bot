@@ -5,9 +5,11 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
 from aiogram.utils.media_group import MediaGroupBuilder
+import psycopg2
 
 from keyboard import *
 from mcp_part.agent import *
+from postgres_db.crud_operations import *
 
 router = Router()
 
@@ -23,6 +25,14 @@ class ActualState(StatesGroup):
 @router.message(CommandStart())
 async def command_start_handler(message: Message, state: FSMContext) -> None:
     await state.clear()
+    try:
+        UserCRUD.create_user(username=message.from_user.username)
+        print(f'-------------- пользователь с ником {message.from_user.username} успешно зарегистрировался --------------')
+    except psycopg2.errors.UniqueViolation:
+        print('Такой пользователь уже существует')
+    except Exception as e:
+        print(e)
+
     start_text = (
         f"Привет, {html.bold(message.from_user.full_name)}!\n"
         f'Я ваш {html.bold('ИИ ассистент.')}\n\n'
@@ -180,15 +190,22 @@ async def start_email_input(message: Message, state: FSMContext) -> None:
 async def process_email(message: Message, state: FSMContext) -> None:
     # Здесь должна быть валидация почты (пропущена по условию)
     await state.set_state(ActualState.reg_ycal_caldav)
+    await state.update_data(email=message.text)
     await message.answer("Теперь введите CalDAV ссылку:")
 
 @router.message(StateFilter(ActualState.reg_ycal_caldav))
 async def process_caldav(message: Message, state: FSMContext) -> None:
     await state.set_state(ActualState.reg_ycal_key)
+    await state.update_data(caldav_url=message.text)
     await message.answer("Введите секретный ключ:")
 
 @router.message(StateFilter(ActualState.reg_ycal_key))
 async def process_key(message: Message, state: FSMContext) -> None:
+    user_data = await state.get_data()
+    email = user_data.get("email")
+    caldav_url = user_data.get("caldav_url")
+    key = message.text
+
     answer_text = (
         "Регистрация календаря завершена! Данные сохранены.\n"
         "Если вы ввели некорректные данные ассистент не сможет получить доступ к вашему календарю.\n\n"

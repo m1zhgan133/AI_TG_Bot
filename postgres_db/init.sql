@@ -16,9 +16,10 @@ CREATE TABLE IF NOT EXISTS scheduled_messages (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(200),
     content TEXT NOT NULL,
-    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL
+    scheduled_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_sent BOOLEAN DEFAULT FALSE
 );
 
 -- Создание индексов для оптимизации запросов
-CREATE INDEX IF NOT EXISTS idx_scheduled_messages_user_id ON scheduled_messages(user_id);
-CREATE INDEX IF NOT EXISTS idx_scheduled_messages_scheduled_time ON scheduled_messages(scheduled_time);
+--CREATE INDEX IF NOT EXISTS idx_scheduled_messages_user_id ON scheduled_messages(user_id);
+--CREATE INDEX IF NOT EXISTS idx_scheduled_messages_scheduled_time ON scheduled_messages(scheduled_time);
