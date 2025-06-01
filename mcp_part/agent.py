@@ -10,6 +10,9 @@ from rich import print as rprint
 
 from langchain_openai import ChatOpenAI
 
+from mcp_part.system_prompt import system_prompt
+
+
 load_dotenv()
 model = ChatOpenAI(api_key=os.getenv("OPENAI_API_KEY"),
                      model="gpt-4o-mini-2024-07-18",
@@ -25,8 +28,9 @@ def _log(ans):
 async def generate_response(prompt):
     server_params = StdioServerParameters(
         command="python",
-        args=[".//server.py"],
+        args=["..//mcp_part//server.py"],
     )
+
 
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
@@ -37,6 +41,7 @@ async def generate_response(prompt):
             agent = create_react_agent(model, tools)
 
             agent_response = await agent.ainvoke({"messages": [
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": prompt}]})
             _log(agent_response)
 
