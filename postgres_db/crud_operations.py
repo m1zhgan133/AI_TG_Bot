@@ -39,10 +39,17 @@ class UserCRUD:
             db.close()
 
     @staticmethod
-    def get_user_by_username(username: str) -> Optional[User]:
+    def get_user_by_username(username: str): # -> Optional[User]:
         """Получение пользователя по имени пользователя"""
         db = get_db_session()
         try:
+            # user = db.query(User).filter(User.username == username).first()
+            # return {
+            #     'username': user.username,
+            #     'yandex_email': user.yandex_email,
+            #     'yandex_password': user.yandex_password,
+            #     'yandex_calendar_link': user.yandex_calendar_link,
+            # }
             return db.query(User).filter(User.username == username).first()
         finally:
             db.close()
@@ -57,11 +64,11 @@ class UserCRUD:
             db.close()
 
     @staticmethod
-    def get_all_users(skip: int = 0, limit: int = 100) -> List[User]:
+    def get_all_users() -> List[User]: # skip: int = 0, limit: int = 100
         """Получение всех пользователей с пагинацией"""
         db = get_db_session()
         try:
-            return db.query(User).offset(skip).limit(limit).all()
+            return db.query(User).all() # .offset(skip).limit(limit)
         finally:
             db.close()
 

@@ -4,6 +4,7 @@ from aiogram import html, F, Router
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 from aiogram.filters import StateFilter
+from aiogram.utils.chat_member import USERS
 from aiogram.utils.media_group import MediaGroupBuilder
 import psycopg2
 
@@ -28,10 +29,8 @@ async def command_start_handler(message: Message, state: FSMContext) -> None:
     try:
         UserCRUD.create_user(username=message.from_user.username)
         print(f'-------------- пользователь с ником {message.from_user.username} успешно зарегистрировался --------------')
-    except psycopg2.errors.UniqueViolation:
-        print('Такой пользователь уже существует')
     except Exception as e:
-        print(e)
+        pass
 
     start_text = (
         f"Привет, {html.bold(message.from_user.full_name)}!\n"
@@ -64,7 +63,15 @@ async def GPT_4o_mini_start(message: Message, state: FSMContext) -> None:
 async def GPT_4o_mini_answer(message: Message) -> None:
     try:
         msg = await message.answer('Ответ генерируется...')
-        response = await generate_response(message.text)
+
+        user = UserCRUD.get_user_by_username(username=message.from_user.username)
+        user_data = {
+            'username': user.username,
+            'yandex_email': user.yandex_email,
+            'yandex_password': user.yandex_password,
+            'yandex_calendar_link': user.yandex_calendar_link
+        }
+        response = await generate_response(message.text, user_data=user_data)
         await msg.delete()
         await message.reply(f'{response}')
 
@@ -72,7 +79,7 @@ async def GPT_4o_mini_answer(message: Message) -> None:
         await message.answer("Неверный формат!")
 
 
-# --------------------------------------------- регистрация яндекс почты
+# --------------------------------------------- регистрация яндекс почты ---------------------------------------------
 
 @router.message(Command('registrate_Ycal'))
 async def command_reg_ycal_handler(message: Message, state: FSMContext) -> None:
@@ -191,13 +198,13 @@ async def process_email(message: Message, state: FSMContext) -> None:
     # Здесь должна быть валидация почты (пропущена по условию)
     await state.set_state(ActualState.reg_ycal_caldav)
     await state.update_data(email=message.text)
-    await message.answer("Теперь введите CalDAV ссылку:")
+    await message.answer("Теперь введите CalDAV ссылку на календарь:")
 
 @router.message(StateFilter(ActualState.reg_ycal_caldav))
 async def process_caldav(message: Message, state: FSMContext) -> None:
     await state.set_state(ActualState.reg_ycal_key)
     await state.update_data(caldav_url=message.text)
-    await message.answer("Введите секретный ключ:")
+    await message.answer("Введите пароль приложения(календаря):")
 
 @router.message(StateFilter(ActualState.reg_ycal_key))
 async def process_key(message: Message, state: FSMContext) -> None:
@@ -206,11 +213,25 @@ async def process_key(message: Message, state: FSMContext) -> None:
     caldav_url = user_data.get("caldav_url")
     key = message.text
 
-    answer_text = (
-        "Регистрация календаря завершена! Данные сохранены.\n"
-        "Если вы ввели некорректные данные ассистент не сможет получить доступ к вашему календарю.\n\n"
-        "Введите /start чтобы вернуться в главное меню."
-    )
-    await message.answer(answer_text)
+    try:
+        UserCRUD.update_user_by_username(username=message.from_user.username, yandex_email=email ,yandex_password=key ,yandex_calendar_link=caldav_url )
+        answer_text = (
+            "Регистрация календаря завершена! Данные сохранены.\n"
+            "Внимание!! Если вы ввели некорректные данные ассистент не сможет получить доступ к вашему календарю.\n\n"
+            "Введите /start чтобы вернуться в главное меню."
+        )
+        await message.answer(answer_text)
+    except Exception as e:
+        await message.answer('Произошла ошибка')
+        print('Ошибка при обновлении данных календаря', e, sep='\n')
+
+
     # Здесь будет ваша логика обработки данных
     await state.clear()  # Очищаем состояние
+
+
+# --------------------------------------------- админские команды ---------------------------------------------
+@router.message(Command('admin_get_all_users'))
+async def admin_get_all_users(message: Message, state: FSMContext) -> None:
+    if os.getenv('admin_username') == message.from_user.username:
+        await message.answer(str(UserCRUD.get_all_users()), parse_mode=None)

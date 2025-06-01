@@ -25,7 +25,7 @@ def _log(ans):
         rprint(f"[{type(message).__name__}] {message.content} {getattr(message, 'tool_calls', '')}")
 
 
-async def generate_response(prompt):
+async def generate_response(prompt, user_data):
     server_params = StdioServerParameters(
         command="python",
         args=["..//mcp_part//server.py"],
@@ -41,7 +41,7 @@ async def generate_response(prompt):
             agent = create_react_agent(model, tools)
 
             agent_response = await agent.ainvoke({"messages": [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": system_prompt + '\n\nInformation about user:\n' + str(user_data)},
                 {"role": "user", "content": prompt}]})
             _log(agent_response)
 
